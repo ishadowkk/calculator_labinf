@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Perfect jQuery Calculator</title>
+  <!-- jQuery CDN -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #0f172a;          /* slate-900 */
+      --panel: #111827;       /* gray-900 */
+      --muted: #9ca3af;       /* gray-400 */
+      --text: #e5e7eb;        /* gray-200 */
+      --accent: #22c55e;      /* green-500 */
+      --accent-2: #3b82f6;    /* blue-500 */
+      --danger: #ef4444;      /* red-500 */
+      --shadow: 0 20px 40px rgba(0,0,0,.35);
+    }
+    [data-theme="light"] {
+      --bg: #f8fafc;          /* slate-50 */
+      --panel: #ffffff;       /* white */
+      --muted: #6b7280;       /* gray-500 */
+      --text: #0f172a;        /* slate-900 */
+      --accent: #16a34a;      /* green-600 */
+      --accent-2: #2563eb;    /* blue-600 */
+      --danger: #dc2626;      /* red-600 */
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 30% 20%, rgba(59,130,246,.08), transparent),
+                  radial-gradient(1000px 600px at 80% 10%, rgba(34,197,94,.08), transparent),
+                  var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .calc {
+      width: min(100%, 1024px);
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .calc { grid-template-columns: 1fr; }
+      .history { order: 2; }
+    }
+
+    .panel {
+      background: var(--panel);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,.06);
+    }
+
+    .display {
+      padding: 20px 20px 8px 20px;
+      display: grid;
+      gap: 6px;
+      border-bottom: 1px dashed rgba(255,255,255,.06);
+    }
+
+    .expr { 
+      min-height: 28px; 
+      font-size: 18px; 
+      color: var(--muted); 
+      word-break: break-all; 
+    }
+    .result {
+      font-size: clamp(32px, 3.6vw, 48px);
+      font-weight: 700;
+      letter-spacing: .5px;
+      line-height: 1.2;
+      word-break: break-all;
+    }
+
+    .toolbar {
+      display: flex; gap: 10px; align-items: center; justify-content: space-between;
+      padding: 10px 16px 14px 16px;
+    }
+    .toolbar .left, .toolbar .right { display:flex; gap:10px; align-items:center; }
+
+    .btn {
+      appearance: none; border: none; outline: none; cursor: pointer;
+      padding: 12px 14px; border-radius: 12px; font-weight: 600; letter-spacing: .2px;
+      color: var(--text); background: rgba(255,255,255,.06);
+      transition: transform .05s ease, background .2s ease, opacity .2s ease;
+      box-shadow: 0 6px 16px rgba(0,0,0,.15) inset, 0 2px 0 rgba(255,255,255,.04);
+    }
+    .btn:hover { background: rgba(255,255,255,.09); }
+    .btn:active { transform: translateY(1px); }
+    .btn[disabled] { opacity: .4; cursor: not-allowed; }
+
+    .grid { padding: 16px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .key { height: 56px; font-size: 18px; }
+    .key.op { background: rgba(59,130,246,.15); }
+    .key.eq { background: var(--accent); color: white; box-shadow: 0 10px 30px rgba(34,197,94,.4); }
+    .key.fn { background: rgba(239,68,68,.14); color: #fecaca; }
+    .key.mem { background: rgba(34,197,94,.12); }
+
+    .span-2 { grid-column: span 2; }
+    .span-3 { grid-column: span 3; }
+
+    .history { background: var(--panel); border-radius: 20px; box-shadow: var(--shadow); border: 1px solid rgba(255,255,255,.06); }
+    .history header { display:flex; align-items:center; justify-content:space-between; padding: 16px 16px; border-bottom:1px dashed rgba(255,255,255,.06); }
+    .history h3 { margin: 0; font-size: 16px; opacity: .9; letter-spacing: .3px; }
+    .history-list { max-height: 440px; overflow:auto; padding: 8px 8px 16px 8px; }
+    .hitem { padding: 10px 12px; border-radius: 12px; margin: 8px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.06); }
+    .hitem .h-expr { font-size: 13px; color: var(--muted); }
+    .hitem .h-res { font-size: 18px; font-weight: 700; }
+    .history .empty { color: var(--muted); text-align:center; padding: 24px; }
+
+    .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important; overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
+    .hint { color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <main class="calc" data-theme="dark" aria-label="Calculator">
+    <section class="panel">
+      <div class="display" role="region" aria-live="polite" aria-atomic="true">
+        <div class="expr" id="expr" title="Expression">&nbsp;</div>
+        <div class="result" id="result" title="Result">0</div>
+      </div>
+
+      <div class="toolbar" role="toolbar" aria-label="Actions">
+        <div class="left">
+          <button class="btn" id="copy" aria-label="Copy result (Ctrl/Cmd+C)">Copy</button>
+          <button class="btn" id="theme" aria-label="Toggle light/dark theme">Theme</button>
+        </div>
+        <div class="right hint">Keyboard: 0–9 • + - × ÷ • Enter= = • Backspace= ⌫ • Esc= AC</div>
+      </div>
+
+      <div class="grid" role="group" aria-label="Keypad">
+        <button class="btn key fn" data-key="AC" aria-label="All clear (Esc)">AC</button>
+        <button class="btn key fn" data-key="C" aria-label="Clear entry">C</button>
+        <button class="btn key fn" data-key="⌫" aria-label="Backspace (Del/Backspace)">⌫</button>
+        <button class="btn key op" data-key="÷" aria-label="Divide">÷</button>
+
+        <button class="btn key" data-key="7">7</button>
+        <button class="btn key" data-key="8">8</button>
+        <button class="btn key" data-key="9">9</button>
+        <button class="btn key op" data-key="×" aria-label="Multiply">×</button>
+
+        <button class="btn key" data-key="4">4</button>
+        <button class="btn key" data-key="5">5</button>
+        <button class="btn key" data-key="6">6</button>
+        <button class="btn key op" data-key="-" aria-label="Subtract">−</button>
+
+        <button class="btn key" data-key="1">1</button>
+        <button class="btn key" data-key="2">2</button>
+        <button class="btn key" data-key="3">3</button>
+        <button class="btn key op" data-key="+" aria-label="Add">+</button>
+
+        <button class="btn key mem" data-key="MC" aria-label="Memory clear">MC</button>
+        <button class="btn key mem" data-key="MR" aria-label="Memory recall">MR</button>
+        <button class="btn key mem" data-key="M+" aria-label="Memory add">M+</button>
+        <button class="btn key mem" data-key="M-" aria-label="Memory subtract">M-</button>
+
+        <button class="btn key" data-key="±" aria-label="Toggle sign">±</button>
+        <button class="btn key" data-key="0">0</button>
+        <button class="btn key" data-key="." aria-label="Decimal">.</button>
+        <button class="btn key eq" data-key="=" aria-label="Equals (Enter)">=</button>
+
+        <button class="btn key" data-key="(" aria-label="Left parenthesis">(</button>
+        <button class="btn key" data-key=")" aria-label="Right parenthesis">)</button>
+        <button class="btn key" data-key="%" aria-label="Percent">%</button>
+        <button class="btn key" data-key="ANS" aria-label="Use last answer">ANS</button>
+      </div>
+    </section>
+
+    <aside class="history" aria-label="History">
+      <header>
+        <h3>History</h3>
+        <div>
+          <button class="btn" id="clear-history" aria-label="Clear history">Clear</button>
+        </div>
+      </header>
+      <div class="history-list" id="history">
+        <div class="empty">No history yet. Perform a calculation and it will appear here.</div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    (function($){
+      const $expr = $('#expr');
+      const $result = $('#result');
+      const $keys = $('.key');
+      const $history = $('#history');
+      const $themeBtn = $('#theme');
+      const $copyBtn = $('#copy');
+      const $clearHistory = $('#clear-history');
+      const $root = $('.calc');
+
+      let expression = '';
+      let lastAnswer = 0;
+      let memory = 0;
+
+      // Helpers
+      function updateDisplay() {
+        $expr.text(expression || '\u00A0');
+      }
+      function setResult(val) {
+        $result.text(val);
+      }
+
+      function sanitizeForEval(str){
+        // Replace display operators
+        let s = str.replace(/×/g,'*').replace(/÷/g,'/');
+        // Trim repeated operators (basic normalization, keeps minus for negatives)
+        s = s.replace(/\s+/g,'');
+        // Only allow digits, operators, parens and dot
+        if(!/^[0-9+\-*/%().]*$/.test(s)) return null;
+        // Disallow dangerous sequences (just-in-case)
+        if(/\.{2,}|\+{3,}|\*{3,}|\/{3,}/.test(s)) return null;
+        return s;
+      }
+
+      function tryEvaluate(str){
+        const safe = sanitizeForEval(str);
+        if(safe === null) throw new Error('Invalid expression');
+        // Avoid leading operators like * or /
+        if(/^([*/%]).*/.test(safe)) throw new Error('Invalid start');
+        // Evaluate using Function (no access to local scope)
+        let out = Function('return (' + safe + ')')();
+        if(!isFinite(out)) throw new Error('Math error');
+        // Round tiny FP noise
+        out = Math.round((out + Number.EPSILON) * 1e12) / 1e12;
+        return out;
+      }
+
+      function pushHistory(expr, res){
+        const item = $('<div class="hitem" tabindex="0" role="button" aria-label="Reuse calculation"></div>');
+        item.append('<div class="h-expr">'+$('<div/>').text(expr).html()+'</div>');
+        item.append('<div class="h-res">'+res+'</div>');
+        item.on('click keypress', function(e){
+          if(e.type==='click' || (e.type==='keypress' && (e.key==='Enter' || e.key===' '))){
+            expression = String(res);
+            updateDisplay();
+            setResult(res);
+          }
+        });
+        const wasEmpty = $history.find('.hitem').length === 0;
+        $history.prepend(item);
+        if(wasEmpty){ $history.find('.empty').remove(); }
+      }
+
+      function clearAll(){
+        expression = '';
+        updateDisplay();
+        setResult(0);
+      }
+
+      function clearEntry(){
+        // Remove last token (number or operator)
+        expression = expression.replace(/\s+/g,'');
+        expression = expression.slice(0, -1);
+        updateDisplay();
+      }
+
+      function backspace(){ clearEntry(); }
+
+      function appendToken(t){
+        if(t === '.'){
+          // prevent two dots in the current number
+          const parts = expression.split(/([+\-×÷*/%()])/);
+          const last = parts[parts.length-1] || '';
+          if(last.includes('.')) return; 
+        }
+        expression += t;
+        updateDisplay();
+      }
+
+      function toggleSign(){
+        // Wrap the last number in (-x)
+        const m = /([0-9.]+)(?!.*[0-9.])/;
+        const found = expression.match(m);
+        if(!found) return;
+        const n = found[1];
+        const start = expression.lastIndexOf(n);
+        const prev = expression.slice(0,start);
+        const neg = Number(n) * -1;
+        expression = prev + '(' + neg + ')';
+        updateDisplay();
+      }
+
+      function applyPercent(){
+        // Convert last number to percent of 1: n% -> n/100
+        const m = /([0-9.]+)(?!.*[0-9.])/;
+        const found = expression.match(m);
+        if(!found) return;
+        const n = parseFloat(found[1]);
+        if(isNaN(n)) return;
+        const start = expression.lastIndexOf(found[1]);
+        const prev = expression.slice(0,start);
+        expression = prev + '(' + (n/100) + ')';
+        updateDisplay();
+      }
+
+      function equals(){
+        try {
+          const res = tryEvaluate(expression);
+          lastAnswer = res;
+          setResult(res);
+          pushHistory(expression, res);
+          expression = String(res);
+          updateDisplay();
+        } catch(err){
+          setResult('Error');
+        }
+      }
+
+      function handleMemory(key){
+        try {
+          const cur = tryEvaluate(expression || String(lastAnswer || 0));
+          if(key==='MR'){ expression = String(memory || 0); updateDisplay(); setResult(memory || 0); }
+          else if(key==='MC'){ memory = 0; }
+          else if(key==='M+'){ memory = (memory || 0) + cur; }
+          else if(key==='M-'){ memory = (memory || 0) - cur; }
+        } catch(_){}
+      }
+
+      function handleKey(label){
+        switch(label){
+          case 'AC': return clearAll();
+          case 'C': return clearEntry();
+          case '⌫': return backspace();
+          case '=': return equals();
+          case '±': return toggleSign();
+          case '%': return applyPercent();
+          case 'ANS': expression += String(lastAnswer); return updateDisplay();
+          case 'MC': case 'MR': case 'M+': case 'M-': return handleMemory(label);
+          default:
+            return appendToken(label);
+        }
+      }
+
+      // Mouse/touch
+      $keys.on('click', function(){
+        const key = $(this).data('key');
+        handleKey(String(key));
+      });
+
+      // Keyboard support
+      $(document).on('keydown', function(e){
+        const k = e.key;
+        if((k>='0' && k<='9') || k==='.' || k==='(' || k===')') { appendToken(k); return; }
+        if(k==='+'||k==='-'||k==='*'||k==='/' ) { appendToken(k.replace('*','×').replace('/','÷').replace('×','×').replace('÷','÷')); return; }
+        if(k==='Enter' || k==='='){ e.preventDefault(); equals(); return; }
+        if(k==='Backspace' || k==='Delete'){ backspace(); return; }
+        if(k==='Escape'){ clearAll(); return; }
+        if(k==='%'){ applyPercent(); return; }
+      });
+
+      // Copy result
+      $copyBtn.on('click', async function(){
+        try {
+          await navigator.clipboard.writeText($result.text());
+          $copyBtn.text('Copied!');
+          setTimeout(()=> $copyBtn.text('Copy'), 900);
+        } catch(err){
+          $copyBtn.text('Press Ctrl/Cmd+C');
+          setTimeout(()=> $copyBtn.text('Copy'), 1200);
+        }
+      });
+
+      // Theme toggle (persist in localStorage)
+      const savedTheme = localStorage.getItem('calc-theme');
+      if(savedTheme) $root.attr('data-theme', savedTheme);
+      $themeBtn.on('click', function(){
+        const cur = $root.attr('data-theme');
+        const next = cur === 'dark' ? 'light' : 'dark';
+        $root.attr('data-theme', next);
+        localStorage.setItem('calc-theme', next);
+      });
+
+      $clearHistory.on('click', function(){
+        $history.empty().append('<div class="empty">No history yet. Perform a calculation and it will appear here.</div>');
+      });
+
+      // Initial render
+      updateDisplay();
+      setResult(0);
+
+    })(jQuery);
+  </script>
+</body>
+</html>
