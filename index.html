@@ -9,10 +9,12 @@
       integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
       crossorigin="anonymous"
     />
+
+    <script src="script.js"></script>
     <title>Calculator</title>
   </head>
   <body>
-    <div class="row mt-5 mb-5 ml-1 mr-1">
+    <div class="row mt-5 mb-5 ms-1 me-1">
       <div class="col-sm-4">
         <div class="card">
           <div class="card-body">
@@ -57,7 +59,7 @@
                     <button
                       type="button"
                       class="btn btn-primary"
-                      onclick="operation('+');"
+                      onclick="addOperator('+')"
                     >
                       +
                     </button>
@@ -95,7 +97,7 @@
                     <button
                       type="button"
                       class="btn btn-primary"
-                      onclick="operation('-');"
+                      onclick="addOperator('-')"
                     >
                       -
                     </button>
@@ -133,7 +135,7 @@
                     <button
                       type="button"
                       class="btn btn-primary"
-                      onclick="operation('*');"
+                      onclick="addOperator('*')"
                     >
                       *
                     </button>
@@ -154,7 +156,7 @@
                     <button
                       type="button"
                       class="btn btn-primary"
-                      onclick="operation('C');"
+                      onclick="addOperator('C')"
                     >
                       C
                     </button>
@@ -163,7 +165,7 @@
                     <button
                       type="button"
                       class="btn btn-primary"
-                      onclick="operation('/');"
+                      onclick="addOperator('/')"
                     >
                       /
                     </button>
@@ -175,8 +177,8 @@
                   <td colspan="4">
                     <button
                       type="button"
-                      class="btn btn-primary btn-lg w-100 btn-block"
-                      onclick="calculate();"
+                      class="btn btn-primary btn-lg w-100"
+                      onclick="calculate()"
                     >
                       =
                     </button>
